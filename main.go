@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"sync"
-	"time"
 
 	"github.com/Raviraj2000/go-web-crawler/crawler"
 	"github.com/Raviraj2000/go-web-crawler/storage"
@@ -11,8 +10,7 @@ import (
 
 func main() {
 	rateLimiter := crawler.NewRateLimiter(3, 10)
-
-	c := crawler.NewCrawler(10, rateLimiter)
+	c := crawler.NewCrawler(1000, rateLimiter)
 	c.Start()
 
 	seedURLs := []string{
@@ -22,12 +20,14 @@ func main() {
 	}
 
 	for _, url := range seedURLs {
+		c.JobCounter.Add(1) // Increment for each seed URL
 		c.Jobs <- url
 	}
 
+	// Close the Jobs channel when all URLs are processed
 	go func() {
-		time.Sleep(60 * time.Second)
-		close(c.Jobs)
+		c.JobCounter.Wait() // Wait until all jobs are done
+		close(c.Jobs)       // Close Jobs only when no more URLs are left to enqueue
 	}()
 
 	var wg sync.WaitGroup

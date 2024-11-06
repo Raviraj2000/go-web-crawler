@@ -14,6 +14,7 @@ type Crawler struct {
 	Visited     map[string]bool
 	Mutex       sync.RWMutex
 	MaxDepth    int
+	JobCounter  sync.WaitGroup // New field to track active jobs
 }
 
 func NewCrawler(workerCount int, rateLimiter *RateLimiter) *Crawler {
@@ -23,12 +24,14 @@ func NewCrawler(workerCount int, rateLimiter *RateLimiter) *Crawler {
 		WorkerCount: workerCount,
 		RateLimiter: rateLimiter,
 		Visited:     make(map[string]bool),
+		JobCounter:  sync.WaitGroup{}, // Initialize the JobCounter WaitGroup
 	}
 }
 
+
 func (c *Crawler) Start() {
 	for i := 0; i < c.WorkerCount; i++ {
-		go worker(i, c.Jobs, c.Results, c.RateLimiter, c)
+		go worker(i, c.Jobs, c.Results, c.RateLimiter, c, &c.JobCounter)
 	}
 }
 

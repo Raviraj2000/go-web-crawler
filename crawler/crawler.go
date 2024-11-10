@@ -28,7 +28,6 @@ func NewCrawler(workerCount int, rateLimiter *RateLimiter) *Crawler {
 	}
 }
 
-
 func (c *Crawler) Start() {
 	for i := 0; i < c.WorkerCount; i++ {
 		go worker(i, c.Jobs, c.Results, c.RateLimiter, c, &c.JobCounter)

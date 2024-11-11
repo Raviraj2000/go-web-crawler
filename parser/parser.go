@@ -23,7 +23,7 @@ func Parse(resp *http.Response) (storage.PageData, []string, error) {
 	if err != nil {
 		return data, links, fmt.Errorf("Error loading body: %s", err)
 	}
-
+	data.URL = resp.Request.URL.String()
 	data.Title = doc.Find("title").Text()
 	data.Desciption, _ = doc.Find("meta[name=description]").Attr("content")
 

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-crawler
+spec:
+  replicas: 3  # Number of crawler instances
+  selector:
+    matchLabels:
+      app: web-crawler
+  template:
+    metadata:
+      labels:
+        app: web-crawler
+    spec:
+      containers:
+      - name: web-crawler
+        image: web-crawler:latest
+        imagePullPolicy: IfNotPresent  # Uses local image if available
+        ports:
+          - containerPort: 8080
+        env:
+          - name: REDIS_ADDR
+            value: "redis-service:6379"  # Redis service address
+          - name: SEED_URL
+            valueFrom:
+              configMapKeyRef:
+                name: crawler-config
+                key: SEED_URL
+          - name: WORKER_COUNT
+            valueFrom:
+              configMapKeyRef:
+                name: crawler-config
+                key: WORKER_COUNT
+        volumeMounts:
+          - name: output-volume
+            mountPath: /output
+      volumes:
+        - name: output-volume
+          emptyDir: {}  # For temporary storage, or consider PersistentVolume if needed

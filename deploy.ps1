@@ -1,7 +1,15 @@
 param (
     [int]$WaitTime = 60,  # Default wait time in seconds if no argument is provided
-    [bool]$build = $false  # Default value for the build parameter
+    [bool]$build = $false,  # Default value for the build parameter
+    [string]$SeedUrl = "",  # Seed URL (required)
+    [string]$WorkerCount = "1000"  # Default worker count
 )
+
+# Check if SeedUrl is provided
+if ([string]::IsNullOrEmpty($SeedUrl)) {
+    Write-Output "Error: Seed URL is required. Please provide a valid Seed URL with the -SeedUrl parameter."
+    exit 1
+}
 
 # Step 1: Start Minikube if it's not already running
 Write-Output "Starting Minikube..."
@@ -24,9 +32,9 @@ if ($build) {
     }
 }
 
-# Step 4: Apply Kubernetes configurations
-Write-Output "Applying Kubernetes ConfigMap..."
-kubectl apply -f k8s/crawler-configmap.yaml
+# Step 4: Create or update the ConfigMap with dynamic SEED_URL and WORKER_COUNT
+Write-Output "Creating or updating Kubernetes ConfigMap with dynamic values..."
+kubectl create configmap crawler-config --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --dry-run=client -o yaml | kubectl apply -f -
 
 Write-Output "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
@@ -71,7 +79,6 @@ python eval/count.py
 Write-Output "Cleaning up Kubernetes resources..."
 kubectl delete -f k8s/crawler-deployment.yaml
 kubectl delete -f k8s/redis-deployment.yaml
-kubectl delete -f k8s/crawler-configmap.yaml
 
 Write-Output "Kubernetes resources cleaned up."
 Write-Output "Deployment completed."

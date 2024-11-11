@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: crawler-config
-data:
-  SEED_URL: "https://www.nytimes.com"  # Replace with your desired seed URL
-  WORKER_COUNT: "1000"                   # Number of workers per crawler instance

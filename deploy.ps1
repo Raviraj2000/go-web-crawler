@@ -1,9 +1,12 @@
 param (
-    [int]$WaitTime = 60,  # Default wait time in seconds if no argument is provided
-    [bool]$build = $false,  # Default value for the build parameter
-    [string]$SeedUrl = "",  # Seed URL (required)
-    [string]$WorkerCount = "1000"  # Default worker count
+    [int]$WaitTime = 60, # Default wait time in seconds if no argument is provided
+    [bool]$build = $false, # Default value for the build parameter
+    [string]$SeedUrl = "", # Seed URL (required)
+    [string]$WorkerCount = "1000", # Default worker count
+    [string]$MaxUrls = "10000"
 )
+
+Write-Output "Scraping $MaxUrls urls ...."
 
 # Check if SeedUrl is provided
 if ([string]::IsNullOrEmpty($SeedUrl)) {
@@ -26,7 +29,8 @@ if ($build) {
     try {
         docker build -t web-crawler:latest .
         Write-Output "Docker image built successfully."
-    } catch {
+    }
+    catch {
         Write-Output "Error building Docker image: $_"
         exit 1
     }
@@ -34,22 +38,43 @@ if ($build) {
 
 # Step 4: Create or update the ConfigMap with dynamic SEED_URL and WORKER_COUNT
 Write-Output "Creating or updating Kubernetes ConfigMap with dynamic values..."
-kubectl create configmap crawler-config --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap crawler-config --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --from-literal=MAX_URLS=$MaxUrls --dry-run=client -o yaml | kubectl apply -f -
 
 Write-Output "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
 
+Write-Output "Waiting for Redis to be ready..."
+
+$redisStatus = ""
+while ($redisStatus -ne "Running") {
+    Start-Sleep -Seconds 5
+    $redisStatus = kubectl get pod -l app=redis -o jsonpath="{.items[0].status.phase}"
+    Write-Output "Redis status: $redisStatus"
+}
+
+Write-Output "Redis is ready. Initializing...."
+Start-Sleep -Seconds 10  # Wait an additional 10 seconds
+Write-Output "Proceeding to deploy the web crawler."
+
 Write-Output "Deploying Web Crawler..."
 kubectl apply -f k8s/crawler-deployment.yaml
+
+# kubectl get pods -l app=redis
+# kubectl get svc redis-service
 
 # Step 5: Wait for the web crawler pods to finish processing based on the argument provided
 Write-Output "Waiting for $WaitTime seconds for web crawler pods to complete..."
 Start-Sleep -Seconds $WaitTime  # Waits for the specified time
 
 # Step 6: Retrieve the results.json file from one of the web crawler pods
-
 # Get the names of all web crawler pods and ensure it's an array
 $POD_NAMES = kubectl get pods -l app=web-crawler -o jsonpath="{.items[*].metadata.name}" | ForEach-Object { $_ -split " " }
+
+# # Step 6.1: Print logs of each web crawler pod
+# foreach ($POD_NAME in $POD_NAMES) {
+#     Write-Output "Printing logs for pod $POD_NAME..."
+#     kubectl logs $POD_NAME
+# }
 
 # Output the list of pod names for debugging
 Write-Output "Web Crawler Pods Found: $POD_NAMES"
@@ -65,7 +90,8 @@ foreach ($POD_NAME in $POD_NAMES) {
     kubectl cp "${POD_NAME}:/scraped-data/results.json" "./output/results_${POD_NAME}.json"
     if ($?) {
         Write-Output "Results copied to ./output/results_${POD_NAME}.json"
-    } else {
+    }
+    else {
         Write-Output "Failed to copy results.json from pod $POD_NAME"
     }
 }

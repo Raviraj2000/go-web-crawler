@@ -31,9 +31,3 @@ spec:
               configMapKeyRef:
                 name: crawler-config
                 key: WORKER_COUNT
-        volumeMounts:
-          - name: output-volume
-            mountPath: /output
-      volumes:
-        - name: output-volume
-          emptyDir: {}  # For temporary storage, or consider PersistentVolume if needed

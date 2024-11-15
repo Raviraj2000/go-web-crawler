@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/Raviraj2000/go-web-crawler/storage"
+	"github.com/Raviraj2000/go-web-crawler/pkg/storage"
 )
 
 func Parse(resp *http.Response) (storage.PageData, []string, error) {

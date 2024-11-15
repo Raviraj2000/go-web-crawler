@@ -6,9 +6,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Raviraj2000/go-web-crawler/crawler"
-	"github.com/Raviraj2000/go-web-crawler/redisqueue"
-	"github.com/Raviraj2000/go-web-crawler/storage"
+	"github.com/Raviraj2000/go-web-crawler/pkg/crawler"
+	"github.com/Raviraj2000/go-web-crawler/pkg/ratelimiter"
+	"github.com/Raviraj2000/go-web-crawler/pkg/redisqueue"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -58,18 +58,18 @@ func main() {
 	}
 
 	// Initialize the crawler with rate limiter and RedisQueue
-	rateLimiter := crawler.NewRateLimiter(5, 10)
+	rateLimiter := ratelimiter.NewRateLimiter(5, 10)
 	c := crawler.NewCrawler(workerCount, rateLimiter)
 	c.Start(rq) // Pass RedisQueue instance to the crawler
 
 	// Goroutine to save results and add new URLs to the Redis queue
-	go func() {
-		for data := range c.Results {
-			// Save the crawled data
-			storage.Save(data)
-			log.Printf("Crawled and saved: %s - %s\n", data.URL, data.Title)
-		}
-	}()
+	// go func() {
+	// 	for data := range c.Results {
+	// 		// Save the crawled data
+	// 		storage.Save(data)
+	// 		log.Printf("Crawled and saved: %s - %s\n", data.URL, data.Title)
+	// 	}
+	// }()
 
 	// Wait indefinitely (could be improved with graceful shutdown or exit signals)
 	select {}

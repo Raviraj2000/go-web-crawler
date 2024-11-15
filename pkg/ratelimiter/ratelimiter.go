@@ -1,4 +1,4 @@
-package crawler
+package ratelimiter
 
 import (
 	"context"

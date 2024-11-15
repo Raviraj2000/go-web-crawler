@@ -41,7 +41,7 @@ Write-Output "Creating or updating Kubernetes ConfigMap with dynamic values..."
 kubectl create configmap crawler-config --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --from-literal=MAX_URLS=$MaxUrls --dry-run=client -o yaml | kubectl apply -f -
 
 Write-Output "Deploying Redis..."
-kubectl apply -f k8s/redis-deployment.yaml
+kubectl apply -f deployment/redis-deployment.yaml
 
 Write-Output "Waiting for Redis to be ready..."
 
@@ -52,15 +52,11 @@ while ($redisStatus -ne "Running") {
     Write-Output "Redis status: $redisStatus"
 }
 
-Write-Output "Redis is ready. Initializing...."
+Write-Output "Redis is ready"
 Start-Sleep -Seconds 10  # Wait an additional 10 seconds
-Write-Output "Proceeding to deploy the web crawler."
 
 Write-Output "Deploying Web Crawler..."
-kubectl apply -f k8s/crawler-deployment.yaml
-
-# kubectl get pods -l app=redis
-# kubectl get svc redis-service
+kubectl apply -f deployment/crawler-deployment.yaml
 
 # Step 5: Wait for the web crawler pods to finish processing based on the argument provided
 Write-Output "Waiting for $WaitTime seconds for web crawler pods to complete..."
@@ -79,32 +75,11 @@ $POD_NAMES = kubectl get pods -l app=web-crawler -o jsonpath="{.items[*].metadat
 # Output the list of pod names for debugging
 Write-Output "Web Crawler Pods Found: $POD_NAMES"
 
-# Ensure the destination directory exists
-if (!(Test-Path -Path "./output")) {
-    New-Item -ItemType Directory -Path "./output"
-}
-
-# Loop through each pod and copy results.json
-foreach ($POD_NAME in $POD_NAMES) {
-    Write-Output "Copying results.json file from pod $POD_NAME..."
-    kubectl cp "${POD_NAME}:/scraped-data/results.json" "./output/results_${POD_NAME}.json"
-    if ($?) {
-        Write-Output "Results copied to ./output/results_${POD_NAME}.json"
-    }
-    else {
-        Write-Output "Failed to copy results.json from pod $POD_NAME"
-    }
-}
-Write-Output "Results have been copied to ./output directory."
-
-# Step 7: Run Python script to count unique URLs
-Write-Output "Counting unique URLs in output files..."
-python eval/count.py
-
 # Optional: Clean up all Kubernetes resources
 Write-Output "Cleaning up Kubernetes resources..."
-kubectl delete -f k8s/crawler-deployment.yaml
-kubectl delete -f k8s/redis-deployment.yaml
+kubectl delete -f deployment/crawler-deployment.yaml
+kubectl delete -f deployment/redis-deployment.yaml
+Get-Process | Where-Object { $_.Path -match "kubectl" } | Stop-Process
 
 Write-Output "Kubernetes resources cleaned up."
 Write-Output "Deployment completed."

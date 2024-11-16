@@ -12,13 +12,14 @@ func DriverFactory(driverType string) (models.StorageDriver, error) {
 	switch driverType {
 	case "postgres":
 		config := postgresdriver.Config{
-			Host:     "localhost",
+			Host:     "host.docker.internal", // Special hostname for accessing host services from a container
 			Port:     5432,
 			User:     "root",
 			Password: "secret",
 			DBName:   "WebCrawlerDB",
 			SSLMode:  "disable",
 		}
+
 		return postgresdriver.NewPostgresDriver(config)
 	default:
 		return nil, errors.New("unsupported storage driver type")

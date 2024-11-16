@@ -37,15 +37,15 @@ if ($build) {
     }
 }
 
-# Step 4: Create or update the ConfigMap with dynamic SEED_URL and WORKER_COUNT
+# Step 3: Create or update the ConfigMap with dynamic SEED_URL and WORKER_COUNT
 Write-Output "Creating or updating Kubernetes ConfigMap with dynamic values..."
 kubectl create configmap crawler-config --from-literal=STORAGE_DRIVER=$StorageDriver --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --from-literal=MAX_URLS=$MaxUrls --dry-run=client -o yaml | kubectl apply -f -
 
+# Step 4: Deploy Redis
 Write-Output "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
 
 Write-Output "Waiting for Redis to be ready..."
-
 $redisStatus = ""
 while ($redisStatus -ne "Running") {
     Start-Sleep -Seconds 5
@@ -53,29 +53,35 @@ while ($redisStatus -ne "Running") {
     Write-Output "Redis status: $redisStatus"
 }
 
-Write-Output "Redis is ready"
-Start-Sleep -Seconds 10  # Wait an additional 10 seconds
+Write-Output "Redis is ready. Proceeding to Postgres setup."
+kubectl apply -f k8s/postgres-service.yaml
+# Step 5: Set up port-forwarding for PostgreSQL
+Write-Output "Setting up port-forwarding for PostgreSQL..."
+Start-Process -NoNewWindow -FilePath "kubectl" -ArgumentList "port-forward svc/postgres-service 5432:5432"
+Start-Sleep -Seconds 5  # Wait a moment to ensure port-forwarding is ready
 
+# Step 6: Deploy the web crawler
 Write-Output "Deploying Web Crawler..."
 kubectl apply -f k8s/crawler-deployment.yaml
+Start-Sleep -Seconds 5
 
-# Step 5: Wait for the web crawler pods to finish processing based on the argument provided
-Write-Output "Waiting for $WaitTime seconds for web crawler pods to complete..."
-Start-Sleep -Seconds $WaitTime  # Waits for the specified time
-
-# Step 6: Retrieve the results.json file from one of the web crawler pods
-# Get the names of all web crawler pods and ensure it's an array
 $POD_NAMES = kubectl get pods -l app=web-crawler -o jsonpath="{.items[*].metadata.name}" | ForEach-Object { $_ -split " " }
 
-kubectl logs $POD_NAMES[0]
+# Step 7: Wait for the web crawler pods to complete
+Write-Output "Waiting for $WaitTime seconds for web crawler pods to complete..."
+Start-Sleep -Seconds $WaitTime
 
-# Output the list of pod names for debugging
-Write-Output "Web Crawler Pods Found: $POD_NAMES"
-
-# Optional: Clean up all Kubernetes resources
+# Cleanup
 Write-Output "Cleaning up Kubernetes resources..."
 kubectl delete -f k8s/crawler-deployment.yaml
 kubectl delete -f k8s/redis-deployment.yaml
-
-Write-Output "Kubernetes resources cleaned up."
+# Stop the port-forwarding process
+Write-Output "Stopping port-forwarding for PostgreSQL..."
+$portForwardProcess = Get-Process kubectl -ErrorAction SilentlyContinue | Where-Object { $_.StartInfo.Arguments -match "port-forward svc/postgres-service 5432:5432" }
+if ($portForwardProcess) {
+    $portForwardProcess | Stop-Process
+    Write-Output "Port-forwarding stopped."
+} else {
+    Write-Output "No port-forwarding process found."
+}
 Write-Output "Deployment completed."

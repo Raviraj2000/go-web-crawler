@@ -8,10 +8,10 @@ import (
 	"github.com/Raviraj2000/go-web-crawler/pkg/parser"
 	"github.com/Raviraj2000/go-web-crawler/pkg/ratelimiter"
 	"github.com/Raviraj2000/go-web-crawler/pkg/redisqueue"
-	"github.com/Raviraj2000/go-web-crawler/pkg/storage"
+	"github.com/Raviraj2000/go-web-crawler/pkg/storage/models"
 )
 
-func Worker(id int, results chan<- storage.PageData, rateLimiter *ratelimiter.RateLimiter, jobCounter *sync.WaitGroup, redisQueue redisqueue.RedisQueue) {
+func Worker(id int, results chan<- models.PageData, rateLimiter *ratelimiter.RateLimiter, jobCounter *sync.WaitGroup, redisQueue redisqueue.RedisQueue) {
 	for {
 		// Fetch URL from Redis queue
 		url, err := redisQueue.PopURL()

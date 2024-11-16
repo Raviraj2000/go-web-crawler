@@ -3,7 +3,8 @@ param (
     [bool]$build = $false, # Default value for the build parameter
     [string]$SeedUrl = "", # Seed URL (required)
     [string]$WorkerCount = "1000", # Default worker count
-    [string]$MaxUrls = "10000"
+    [string]$MaxUrls = "10000",
+    [string]$StorageDriver = "postgres"
 )
 
 Write-Output "Scraping $MaxUrls urls ...."
@@ -38,10 +39,10 @@ if ($build) {
 
 # Step 4: Create or update the ConfigMap with dynamic SEED_URL and WORKER_COUNT
 Write-Output "Creating or updating Kubernetes ConfigMap with dynamic values..."
-kubectl create configmap crawler-config --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --from-literal=MAX_URLS=$MaxUrls --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap crawler-config --from-literal=STORAGE_DRIVER=$StorageDriver --from-literal=SEED_URL=$SeedUrl --from-literal=WORKER_COUNT=$WorkerCount --from-literal=MAX_URLS=$MaxUrls --dry-run=client -o yaml | kubectl apply -f -
 
 Write-Output "Deploying Redis..."
-kubectl apply -f deployment/redis-deployment.yaml
+kubectl apply -f k8s/redis-deployment.yaml
 
 Write-Output "Waiting for Redis to be ready..."
 
@@ -56,7 +57,7 @@ Write-Output "Redis is ready"
 Start-Sleep -Seconds 10  # Wait an additional 10 seconds
 
 Write-Output "Deploying Web Crawler..."
-kubectl apply -f deployment/crawler-deployment.yaml
+kubectl apply -f k8s/crawler-deployment.yaml
 
 # Step 5: Wait for the web crawler pods to finish processing based on the argument provided
 Write-Output "Waiting for $WaitTime seconds for web crawler pods to complete..."
@@ -66,20 +67,15 @@ Start-Sleep -Seconds $WaitTime  # Waits for the specified time
 # Get the names of all web crawler pods and ensure it's an array
 $POD_NAMES = kubectl get pods -l app=web-crawler -o jsonpath="{.items[*].metadata.name}" | ForEach-Object { $_ -split " " }
 
-# # Step 6.1: Print logs of each web crawler pod
-# foreach ($POD_NAME in $POD_NAMES) {
-#     Write-Output "Printing logs for pod $POD_NAME..."
-#     kubectl logs $POD_NAME
-# }
+kubectl logs $POD_NAMES[0]
 
 # Output the list of pod names for debugging
 Write-Output "Web Crawler Pods Found: $POD_NAMES"
 
 # Optional: Clean up all Kubernetes resources
 Write-Output "Cleaning up Kubernetes resources..."
-kubectl delete -f deployment/crawler-deployment.yaml
-kubectl delete -f deployment/redis-deployment.yaml
-Get-Process | Where-Object { $_.Path -match "kubectl" } | Stop-Process
+kubectl delete -f k8s/crawler-deployment.yaml
+kubectl delete -f k8s/redis-deployment.yaml
 
 Write-Output "Kubernetes resources cleaned up."
 Write-Output "Deployment completed."

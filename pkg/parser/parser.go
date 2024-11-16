@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/Raviraj2000/go-web-crawler/pkg/storage"
+	"github.com/Raviraj2000/go-web-crawler/pkg/storage/models"
 )
 
-func Parse(resp *http.Response) (storage.PageData, []string, error) {
+func Parse(resp *http.Response) (models.PageData, []string, error) {
 
-	var data storage.PageData
+	var data models.PageData
 	var links []string
 
 	if resp.StatusCode != 200 {
@@ -25,7 +25,7 @@ func Parse(resp *http.Response) (storage.PageData, []string, error) {
 	}
 	data.URL = resp.Request.URL.String()
 	data.Title = doc.Find("title").Text()
-	data.Desciption, _ = doc.Find("meta[name=description]").Attr("content")
+	data.Description, _ = doc.Find("meta[name=description]").Attr("content")
 
 	doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")

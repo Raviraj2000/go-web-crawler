@@ -53,11 +53,12 @@ while ($redisStatus -ne "Running") {
     Write-Output "Redis status: $redisStatus"
 }
 
-Write-Output "Redis is ready. Proceeding to Postgres setup."
-kubectl apply -f k8s/postgres-service.yaml
+Write-Output "Redis is ready."
+Write-Output "Proceeding to $StorageDriver setup..."
+kubectl apply -f k8s/database-service.yaml
 # Step 5: Set up port-forwarding for PostgreSQL
-Write-Output "Setting up port-forwarding for PostgreSQL..."
-Start-Process -NoNewWindow -FilePath "kubectl" -ArgumentList "port-forward svc/postgres-service 5432:5432"
+Write-Output "Setting up port-forwarding for $StorageDriver..."
+Start-Process -NoNewWindow -FilePath "kubectl" -ArgumentList "port-forward svc/database-service 5432:5432"
 Start-Sleep -Seconds 5  # Wait a moment to ensure port-forwarding is ready
 
 # Step 6: Deploy the web crawler
@@ -77,7 +78,7 @@ kubectl delete -f k8s/crawler-deployment.yaml
 kubectl delete -f k8s/redis-deployment.yaml
 # Stop the port-forwarding process
 Write-Output "Stopping port-forwarding for PostgreSQL..."
-$portForwardProcess = Get-Process kubectl -ErrorAction SilentlyContinue | Where-Object { $_.StartInfo.Arguments -match "port-forward svc/postgres-service 5432:5432" }
+$portForwardProcess = Get-Process kubectl -ErrorAction SilentlyContinue | Where-Object { $_.StartInfo.Arguments -match "port-forward svc/database-service 5432:5432" }
 if ($portForwardProcess) {
     $portForwardProcess | Stop-Process
     Write-Output "Port-forwarding stopped."

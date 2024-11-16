@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 
+	"github.com/Raviraj2000/go-web-crawler/pkg/database/drivers/mongodriver"
 	"github.com/Raviraj2000/go-web-crawler/pkg/database/drivers/postgresdriver"
 	"github.com/Raviraj2000/go-web-crawler/pkg/storage/models"
 )
@@ -21,6 +22,14 @@ func DriverFactory(driverType string) (models.StorageDriver, error) {
 		}
 
 		return postgresdriver.NewPostgresDriver(config)
+	case "mongodb":
+		config := mongodriver.Config{
+			URI:        "<Add Mongo URI>",
+			Database:   "WebCrawlerDB",
+			Collection: "pages",
+		}
+
+		return mongodriver.NewMongoDriver(config)
 	default:
 		return nil, errors.New("unsupported storage driver type")
 	}

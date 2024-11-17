@@ -24,7 +24,7 @@ func DriverFactory(driverType string) (models.StorageDriver, error) {
 		return postgresdriver.NewPostgresDriver(config)
 	case "mongodb":
 		config := mongodriver.Config{
-			URI:        "<Add Mongo URI>",
+			URI:        "Add Mongo URI here",
 			Database:   "WebCrawlerDB",
 			Collection: "pages",
 		}

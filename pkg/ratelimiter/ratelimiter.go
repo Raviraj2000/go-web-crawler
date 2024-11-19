@@ -7,15 +7,15 @@ import (
 )
 
 type RateLimiter struct {
-	limiter *rate.Limiter
+	Limiter *rate.Limiter
 }
 
 func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
 	return &RateLimiter{
-		limiter: rate.NewLimiter(r, b),
+		Limiter: rate.NewLimiter(r, b),
 	}
 }
 
 func (rl *RateLimiter) Wait() {
-	rl.limiter.Wait(context.Background())
+	rl.Limiter.Wait(context.Background())
 }

@@ -30,7 +30,7 @@ func Parse(resp *http.Response) (models.PageData, []string, error) {
 	doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if exists {
-			link := normalizeURL(resp.Request.URL, href)
+			link := NormalizeURL(resp.Request.URL, href)
 			if link != "" {
 				links = append(links, link)
 			}
@@ -40,7 +40,7 @@ func Parse(resp *http.Response) (models.PageData, []string, error) {
 	return data, links, nil
 }
 
-func normalizeURL(base *url.URL, href string) string {
+func NormalizeURL(base *url.URL, href string) string {
 	u, err := url.Parse(strings.TrimSpace(href))
 	if err != nil {
 		return ""
